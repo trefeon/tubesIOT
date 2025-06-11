@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Monitoring IoT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .data-card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .data-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .motion-active {
+            animation: pulse-green 1.5s infinite;
+        }
+        .motion-inactive {
+             /* Tidak ada animasi khusus, atau bisa tambahkan efek statis */
+        }
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7); } /* Hijau Tailwind (green-400) */
+            70% { box-shadow: 0 0 0 10px rgba(74, 222, 128, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+        }
+         .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .dot-green { background-color: #4ade80; } /* Tailwind green-400 */
+        .dot-red { background-color: #f87171; } /* Tailwind red-400 */
+        .dot-gray { background-color: #9ca3af; } /* Tailwind gray-400 */
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 p-4 sm:p-8">
+    <div class="container mx-auto">
+        <header class="mb-8 text-center">
+            <h1 class="text-4xl font-bold text-gray-700">Dashboard Monitoring IoT</h1>
+            <p class="text-gray-500">Data Sensor Real-time dari Konsentrator dan Jembatan</p>
+        </header>
+
+        <div id="loading-indicator" class="text-center py-10">
+            <svg class="animate-spin h-10 w-10 text-blue-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="mt-2 text-gray-600">Memuat data...</p>
+        </div>
+        
+        <div id="error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-6" role="alert">
+            <strong class="font-bold">Error!</strong>
+            <span class="block sm:inline" id="error-text">Tidak dapat mengambil data dari server.</span>
+        </div>
+
+        <div id="data-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Kartu data akan dimasukkan di sini oleh JavaScript -->
+        </div>
+
+        <footer class="mt-12 text-center text-gray-500 text-sm">
+            <p>&copy; <span id="current-year"></span> Proyek IoT</p>
+            <p>Dashboard ini mengambil data setiap 5 detik.</p>
+        </footer>
+    </div>
+
+    <script>
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+        const dataContainer = document.getElementById('data-container');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const errorMessageDiv = document.getElementById('error-message');
+        const errorTextSpan = document.getElementById('error-text');
+
+        async function fetchData() {
+            try {
+                // Ganti URL jika API Flask Anda berjalan di host/port berbeda dari halaman ini
+                const response = await fetch('/api/latest_data'); 
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const dataStore = await response.json();
+                
+                loadingIndicator.style.display = 'none';
+                errorMessageDiv.classList.add('hidden');
+                updateDashboard(dataStore);
+
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                loadingIndicator.style.display = 'none';
+                errorTextSpan.textContent = `Tidak dapat mengambil data: ${error.message}. Pastikan API backend berjalan.`;
+                errorMessageDiv.classList.remove('hidden');
+                // Jangan hapus kartu lama jika ada error, agar pengguna masih bisa lihat data terakhir yg valid
+            }
+        }
+
+        function formatTimestamp(epochMillis) {
+            if (epochMillis === null || epochMillis === undefined) return 'N/A';
+            try {
+                const date = new Date(epochMillis);
+                 // Cek apakah tanggal valid setelah konversi
+                if (isNaN(date.getTime())) {
+                    // Jika timestamp dari ESP32 (millis()), mungkin itu bukan epoch time standar
+                    // Ini adalah asumsi jika `millis()` langsung dikirim
+                    // Untuk timestamp yang lebih akurat, ESP32 perlu NTP client
+                    return `ESP Uptime: ${epochMillis} ms`;
+                }
+                return date.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'medium' });
+            } catch (e) {
+                return 'Invalid Timestamp';
+            }
+        }
+        
+        function formatServerTimestamp(isoString) {
+            if (!isoString) return 'N/A';
+            try {
+                const date = new Date(isoString);
+                return date.toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'long' });
+            } catch (e) {
+                return 'Invalid Server Timestamp';
+            }
+        }
+
+        function updateDashboard(dataStore) {
+            dataContainer.innerHTML = ''; // Bersihkan kontainer sebelum mengisi data baru
+
+            if (Object.keys(dataStore).length === 0) {
+                dataContainer.innerHTML = '<p class="text-gray-600 col-span-full text-center">Belum ada data perangkat yang diterima.</p>';
+                return;
+            }
+
+            for (const deviceId in dataStore) {
+                const deviceData = dataStore[deviceId];
+                const latest = deviceData.latest; // Ambil data 'latest'
+                if (!latest) continue; // Lewati jika tidak ada data 'latest'
+
+                const temp = latest.temperature_celsius !== null ? latest.temperature_celsius.toFixed(1) + ' °C' : 'N/A';
+                const hum = latest.humidity_percent !== null ? latest.humidity_percent.toFixed(1) + ' %' : 'N/A';
+                const motion = latest.motion_detected;
+                const motionText = motion ? 'Terdeteksi' : 'Aman';
+                const motionClass = motion ? 'motion-active dot-red' : 'motion-inactive dot-green';
+                const deviceTimestamp = formatTimestamp(latest.timestamp);
+                const serverTimestamp = formatServerTimestamp(latest.server_timestamp);
+
+                const card = `
+                    <div class="data-card bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+                        <h2 class="text-2xl font-semibold text-blue-600 mb-3">${deviceId}</h2>
+                        <div class="space-y-2 text-gray-700">
+                            <p><strong>🌡️ Suhu:</strong> <span class="text-lg font-medium">${temp}</span></p>
+                            <p><strong>💧 Kelembaban:</strong> <span class="text-lg font-medium">${hum}</span></p>
+                            <p><strong>🏃 Gerakan:</strong> <span class="status-dot ${motionClass}"></span><span class="text-lg font-medium ${motion ? 'text-red-500' : 'text-green-500'}">${motionText}</span></p>
+                            <p class="text-xs text-gray-500 pt-2"><strong>Timestamp Perangkat:</strong> ${deviceTimestamp}</p>
+                            <p class="text-xs text-gray-500"><strong>Timestamp Server:</strong> ${serverTimestamp}</p>
+                        </div>
+                    </div>
+                `;
+                dataContainer.innerHTML += card;
+            }
+        }
+
+        // Panggil fetchData saat halaman dimuat dan setiap 5 detik
+        fetchData();
+        setInterval(fetchData, 5000);
+    </script>
+</body>
+</html>
