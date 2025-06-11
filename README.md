@@ -1,24 +1,25 @@
-# IoT-Based Flood Detection System
+# IoT Project: Konsentrator dan Jembatan (ESP32 + ESP8266)
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 ## 📝 Description
 
-This project implements an IoT-based flood detection system using ESP32 microcontroller, equipped with water level sensors and real-time notification capabilities. The system helps in early flood detection and warning dissemination.
+This project implements an IoT-based concentrator and bridge system using ESP32 and ESP8266 microcontrollers. The system demonstrates the communication and data handling capabilities between ESP32 (as concentrator) and ESP8266 (as bridge) devices through MQTT protocol.
 
 ## 🌟 Features
 
-- Real-time water level monitoring
+- ESP32 as Concentrator node
+- ESP8266 as Bridge node
 - MQTT-based communication
 - Web dashboard interface
-- Automated alert system
-- ESP32 microcontroller integration
+- Real-time data monitoring
+- Inter-device communication
 
 ## 🛠️ Hardware Requirements
 
 - ESP32 Development Board
-- Water Level Sensors
-- Power Supply Unit
+- ESP8266 Development Board
+- Power Supply Units
 - Connection cables
 - Internet connectivity
 
@@ -33,15 +34,17 @@ This project implements an IoT-based flood detection system using ESP32 microcon
 
 ## 📦 Project Structure
 
-```
+```plaintext
 tubesIOT/
-├── ESP32/                 # ESP32 firmware
-│   └── ESP32.ino         # Main Arduino sketch
-├── web/                   # Web dashboard
-│   ├── css/              # Styling files
-│   ├── js/               # JavaScript files
-│   └── index.html        # Main dashboard
-└── docs/                 # Documentation
+├── ESP32TUBESIOT/        # ESP32 Concentrator firmware
+│   └── ESP32TUBESIOT.ino # Main ESP32 sketch
+├── ESP8266TUBESIOT/      # ESP8266 Bridge firmware
+│   └── ESP8266TUBESIOT.ino # Main ESP8266 sketch
+├── iot/                  # Web application
+│   ├── app_api.py       # Backend API
+│   └── templates/       # Frontend templates
+│       └── dashboard.html # Dashboard interface
+└── mqtt_dashboard.html   # MQTT monitoring dashboard
 ```
 
 ## 🚀 Setup Instructions
@@ -55,10 +58,12 @@ tubesIOT/
 ## 📊 System Architecture
 
 The system consists of:
-- ESP32 with sensors for data collection
-- MQTT broker for message handling
-- Web interface for monitoring
-- Alert system for notifications
+
+- ESP32 acting as a concentrator node for data processing
+- ESP8266 serving as a bridge for data transmission
+- MQTT broker for message handling and routing
+- Web interface for system monitoring and control
+- Python-based backend for data processing
 
 ## 🔧 Configuration
 
